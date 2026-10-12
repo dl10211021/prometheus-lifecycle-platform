@@ -22,7 +22,8 @@ jobs:
       - name: Verify committed vendor tree
         run: test -f vendor/modules.txt
       - name: Unit tests
-        run: make unit
+        # Local deployment and crash-recovery fixtures require UID 0.
+        run: sudo env "PATH=$PATH" "GOFLAGS=$GOFLAGS" make unit
       - name: Go vet
         run: make vet
       - name: Build

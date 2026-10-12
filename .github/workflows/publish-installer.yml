@@ -1,0 +1,63 @@
+name: Publish offline installer to GitHub Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Published stable Release tag (for example v1.0.0)
+        required: true
+        type: string
+      asset_name:
+        description: Public sanitized promlifecycle-*.tar.gz Release asset basename
+        required: true
+        type: string
+      expected_sha256:
+        description: Independently verified archive SHA256 (64 lowercase hex characters)
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: publish-native-installer
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'dl10211021/prometheus-lifecycle-platform' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install checksum-pinned official ORAS 1.3.4
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_dir="$(mktemp -d "$RUNNER_TEMP/plc-oras.XXXXXX")"
+          cd "$tool_dir"
+          curl --proto '=https' --tlsv1.2 --fail --location --retry 3 \
+            --output oras.tar.gz \
+            https://github.com/oras-project/oras/releases/download/v1.3.4/oras_1.3.4_linux_amd64.tar.gz
+          echo 'f27adb935022d94df8dc77719c322dda592c78a0d57a6f7dcdd8d900b248c454  oras.tar.gz' | sha256sum --check --strict
+          tar -xzf oras.tar.gz oras
+          chmod 0755 oras
+          echo "$tool_dir" >> "$GITHUB_PATH"
+          ./oras version
+      - name: Verify input gates and actual OCI file format
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          ORAS_TEST_BIN: oras
+        run: python3 -m unittest discover -s .github/scripts -p test_publish_installer.py -v
+      - name: Publish archive and verify digest pull-back
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          ASSET_NAME: ${{ inputs.asset_name }}
+          EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 .github/scripts/publish_installer.py

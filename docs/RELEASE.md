@@ -1,6 +1,6 @@
 # 发布与使用指南
 
-本源码发布版对应已验收的内部提交 `487e7cd4938b73b688bf7db756ab28ac5e1727d8`。发布历史从干净源码快照开始；原开发 Git 历史、现场会话及旧内部审查报告未导入。生产代码、测试实现、`vendor/`、`deploy.sh` 和构建文件与该提交保持字节一致，仅发布文档作了补充或环境信息匿名化。
+本源码发布版对应已验收的内部提交 `487e7cd4938b73b688bf7db756ab28ac5e1727d8`。发布历史从干净源码快照开始；原开发 Git 历史、现场会话及旧内部审查报告未导入。平台生产代码、原有测试实现、`vendor/`、`deploy.sh` 和 `Makefile` 与该提交保持字节一致。发布版补充了文档与 GitHub Packages 分发工作流、发布脚本及其格式测试，并匿名化了文档中的环境信息；CI 单元测试调整为以 root 运行，以满足既有测试夹具的权限要求。这些交付自动化变化不修改平台运行逻辑。
 
 ## 源码与离线安装包
 
@@ -48,3 +48,23 @@ sudo bash install.sh
 扫描与来源证据保留已解释的剩余匹配，不作“零安全公告”承诺。这里没有宣称其他发行版、SELinux Enforcing、FIPS、容量或高可用已经认证；CentOS/RHEL 7 的 glibc 2.17、Alpine/musl、ARM64、Windows 平台主机和无 systemd 容器不属于本安装包支持目标。当前验收采用单实例管理网络部署；HTTPS 与来源访问控制需按使用环境另行配置和验证。
 
 本次没有新增项目开源许可证；保留的第三方许可证以各自文件为准。
+
+## GitHub Packages 分发
+
+公开安装包为 [`promlifecycle-v1.0.0-linux-amd64-offline.tar.gz`](https://github.com/dl10211021/prometheus-lifecycle-platform/releases/download/v1.0.0/promlifecycle-v1.0.0-linux-amd64-offline.tar.gz)；最终 SHA-256 以同一 [Release](https://github.com/dl10211021/prometheus-lifecycle-platform/releases/tag/v1.0.0) 提供的同名 `.tar.gz.sha256` 校验文件为准。公开版只清理现场元数据并重新打包，保留 `487e7cd` 源码来源和已验收平台、runtime、组件及许可证；不表示重新编译或新增业务验证。
+
+GitHub Packages 中的 `prometheus-lifecycle-platform-installer` 是 OCI 安装归档，包含离线 `.tar.gz` 及同名 `.tar.gz.sha256`，不是可直接运行的 Docker 镜像。安装 [官方 ORAS](https://oras.land/docs/installation/) 后，在空目录执行：
+
+```bash
+oras pull ghcr.io/dl10211021/prometheus-lifecycle-platform-installer:v1.0.0
+sha256sum -c promlifecycle-v1.0.0-linux-amd64-offline.tar.gz.sha256
+tar -xzf promlifecycle-v1.0.0-linux-amd64-offline.tar.gz
+```
+
+进入解压生成的目录，继续执行前文的 `install.sh --check` 和安装步骤。需要锁定内容时，用发布工作流结果中的 `@sha256:...` manifest digest 替换 `:v1.0.0` 后拉取，再校验归档；manifest digest 与安装包文件 SHA-256 是不同值。
+
+维护者在 `main` 分支手动运行 **Publish offline installer to GitHub Packages**，输入已公开 Release 的标签、资产文件名和独立核验的 SHA-256。本次输入分别是 `v1.0.0`、`promlifecycle-v1.0.0-linux-amd64-offline.tar.gz` 和上面的归档摘要。工作流固定官方 ORAS 1.3.4 及发行校验值，只用 job 的 `GITHUB_TOKEN`（`contents: read`、`packages: write`），给 artifact 添加本仓库来源注解，验证实际 OCI 文件格式后推送，再按 manifest digest 拉回核对两份文件。输入通过环境变量传递，不拼接到 shell 脚本。
+
+工作流串行发布，已存在的版本标签会被拒绝；权限、网络或状态不明也停止，不自动覆盖或删除标签。推送后校验失败时需检查已上传制品，不能盲目重跑覆盖。此检查不能代替外部发布者之间的 registry 原子锁，发布权限应由仓库维护者统一管理。
+
+GHCR 新包默认 **Private**，关联公开仓库也不会自动变成 Public。维护者首次发布后需在 [Package settings](https://github.com/users/dl10211021/packages/container/package/prometheus-lifecycle-platform-installer/settings) 调整可见性并验证匿名拉取。此工作流不修改可见性，也不需要额外 PAT。依据：[GitHub Container registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)、[Packages 访问与可见性](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility)。

@@ -4,6 +4,11 @@
 
 一个本地 SQLite、一个内嵌 Web 控制台，默认管理本机，也可通过 SSH 管理远程 Linux 主机。产品只围绕 Prometheus 监控体系从部署、配置、运行维护到备份恢复的完整生命周期。
 
+## 下载
+
+- [v1.0.0 Release 与校验文件](https://github.com/dl10211021/prometheus-lifecycle-platform/releases/tag/v1.0.0) · [Linux x86_64 离线安装包](https://github.com/dl10211021/prometheus-lifecycle-platform/releases/download/v1.0.0/promlifecycle-v1.0.0-linux-amd64-offline.tar.gz)
+- [GitHub Packages 安装归档](https://github.com/users/dl10211021/packages/container/package/prometheus-lifecycle-platform-installer)：通过 ORAS 下载同一离线包与 `.sha256` 文件。它是 OCI 文件制品，不能用 `docker run` 运行平台；解压后仍按原生 systemd 方式安装。命令与发布流程见 [发布指南](docs/RELEASE.md#github-packages-分发)。
+
 ## 能力
 
 - **运行总览**：组件健康率、活跃告警、采集与规则、备份、变更成功率、组件状态与类型分布全部图表化展示。
