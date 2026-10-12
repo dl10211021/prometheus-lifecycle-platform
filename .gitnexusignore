@@ -1,0 +1,20 @@
+# Index the whole source tree, including all vendored dependencies and tests.
+!vendor/
+!vendor/**
+!test-scripts/
+!test-scripts/**
+!**/*_test.go
+!api/router/web/
+!api/router/web/**
+!.github/
+!.github/**
+!go.mod
+!go.sum
+
+# Historical handoff notes and local runtime/build artifacts are not source.
+SESSION_NOTE.md
+*.db
+*.db-wal
+*.db-shm
+*.tar.gz
+*.log

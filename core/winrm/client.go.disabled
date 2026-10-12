@@ -1,0 +1,68 @@
+package winrm
+
+import (
+	"fmt"
+	"net"
+	"strconv"
+	"time"
+
+	"github.com/masterzen/winrm"
+)
+
+// Client represents a WinRM client connection
+type Client struct {
+	*winrm.Client
+	Config *winrm.Config
+}
+
+// NewClient creates a new WinRM client
+func NewClient(host string, port int, username string, password string, useSSL bool) (*Client, error) {
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
+	endpoint := fmt.Sprintf("http://%s/wsman", addr)
+	if useSSL {
+		endpoint = fmt.Sprintf("https://%s/wsman", addr)
+	}
+
+	config := winrm.DefaultConfig()
+	config.Insecure = true
+	config.Timeout = 30 * time.Minute
+	config.Transport = winrm.DefaultTransport(&winrm.ClientSettings{
+		Username: username,
+		Password: password,
+	})
+
+	client, err := winrm.NewClient(config, endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("create winrm client: %w", err)
+	}
+
+	return &Client{Client: client, Config: config}, nil
+}
+
+// RunCommand executes a PowerShell command on the remote host
+func (c *Client) RunCommand(cmd string) (string, string, error) {
+	shell, err := c.Create()
+	if err != nil {
+		return "", "", fmt.Errorf("create shell: %w", err)
+	}
+	defer shell.Close()
+
+	cmd = "powershell -Command [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " + cmd
+	stdout, stderr, err := shell.Run(cmd)
+	return stdout, stderr, err
+}
+
+// CheckDocker checks if Docker Desktop is installed on Windows
+func (c *Client) CheckDocker() (bool, error) {
+	output, _, err := c.RunCommand("& docker --version")
+	if err != nil {
+		return false, fmt.Errorf("docker not found: %s", output)
+	}
+
+	_, _, err = c.RunCommand("& docker ps")
+	if err != nil {
+		return false, fmt.Errorf("docker not running: %s", err.Error())
+	}
+
+	return true, nil
+}

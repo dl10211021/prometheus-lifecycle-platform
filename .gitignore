@@ -1,0 +1,26 @@
+# Build artifacts
+/promlifecycle
+/promlifecycle-server
+/promlifecycle-server-new
+/server
+*.exe
+/coverage.out
+
+# Runtime data
+data/
+test-data/
+*.db
+*.db.lock
+*.db-wal
+*.db-shm
+jwt_secret
+admin_initial_password
+
+# Local environment
+*.log
+.env
+.env.*
+
+# vendor/ is intentionally committed for reproducible offline builds.
+!vendor/
+!vendor/**
